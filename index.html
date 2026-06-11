@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="A romantic flower garden, just for you 💕">
+    <title>Flower Garden for You 💕</title>
+    <link rel="stylesheet" href="main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Inter:wght@300;400&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <canvas id="canvas"></canvas>
+
+        <!-- Floating particles background -->
+        <div class="particles" id="particles"></div>
+
+        <!-- Header with title -->
+        <header class="header">
+            <h1 class="logo">🌸 Flower Garden for you <span class="giggle">"heheehehehhee"</span></h1>
+        </header>
+
+        <!-- Main instruction text -->
+        <div class="name">
+            <span class="text-line">every flower here</span>
+            <span class="text-highlight">Blooms for You 💕</span>
+            <span class="text-line">✨ click anywhere &amp; watch love grow</span>
+
+        </div>
+
+        <!-- Control buttons -->
+        <div class="controls">
+            <button class="clean-btn" id="cleanBtn">
+                <span class="btn-icon">🧹</span>
+                <span class="btn-text">Clear Garden</span>
+            </button>
+
+            <button class="auto-btn" id="autoBtn">
+                <span class="btn-icon">✨</span>
+                <span class="btn-text">Auto Bloom</span>
+            </button>
+
+            <button class="music-btn" id="musicBtn">
+                <span class="btn-icon">🎵</span>
+                <span class="btn-text">Play "Lover"</span>
+            </button>
+        </div>
+
+        <!-- Hidden YouTube player (audio for "Lover" by Taylor Swift) -->
+        <div id="ytPlayer" class="yt-hidden"></div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>Made with 💖 just for you | 🎶 Lover — Taylor Swift</span>
+        </footer>
+    </div>
+
+    <script type="x-shader/x-fragment" id="fragmentShader">
+        #define PI 3.14159265359
+
+        uniform float u_ratio;
+        uniform vec2 u_cursor;
+        uniform float u_stop_time;
+        uniform float u_clean;
+        uniform vec2 u_stop_randomizer;
+        uniform float u_theme; // 0.0 for light, 1.0 for dark
+
+        uniform sampler2D u_texture;
+        varying vec2 vUv;
+
+        // --------------------------------
+        // 2D noise
+
+        vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+        vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
+        float snoise(vec2 v) {
+            const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+            vec2 i = floor(v + dot(v, C.yy));
+            vec2 x0 = v - i + dot(i, C.xx);
+            vec2 i1;
+            i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+            vec4 x12 = x0.xyxy + C.xxzz;
+            x12.xy -= i1;
+            i = mod289(i);
+            vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+            vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+            m = m*m;
+            m = m*m;
+            vec3 x = 2.0 * fract(p * C.www) - 1.0;
+            vec3 h = abs(x) - 0.5;
+            vec3 ox = floor(x + 0.5);
+            vec3 a0 = x - ox;
+            m *= 1.79284291400159 - 0.85373472095314 * (a0*a0 + h*h);
+            vec3 g;
+            g.x = a0.x * x0.x + h.x * x0.y;
+            g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+            return 130.0 * dot(m, g);
+        }
+
+        // Rose petal shape with multiple layers
+        float get_rose_petal(vec2 p, float angle, float layer) {
+            float a = atan(p.y, p.x) + angle;
+            float r = length(p);
+            
+            // Create rose spiral effect
+            float spiral = sin(a * 3.0 + layer * PI * 0.5) * 0.3;
+            float petal = smoothstep(0.08 + spiral * 0.02, 0.0, r - 0.05 - layer * 0.015);
+            
+            return petal;
+        }
+
+        float get_flower_shape(vec2 _p, float _pet_n, float _angle, float _outline) {
+            _angle *= 3.;
+
+            _p = vec2(_p.x * cos(_angle) - _p.y * sin(_angle),
+            _p.x * sin(_angle) + _p.y * cos(_angle));
+
+            float a = atan(_p.y, _p.x);
+
+            // More natural petal shape with variation
+            float petal_variation = 0.15 * sin(a * _pet_n * 2.0);
+            float flower_sectoral_shape = pow(abs(sin(a * _pet_n)), .35) + .2 + petal_variation;
+
+            vec2 flower_size_range = vec2(.04, .12);
+            float size = flower_size_range[0] + u_stop_randomizer[0] * flower_size_range[1];
+
+            float flower_radial_shape = pow(length(_p) / size, 1.8);
+            flower_radial_shape -= .12 * sin(8. * a + u_stop_randomizer[1] * 6.28);
+            flower_radial_shape = max(.08, flower_radial_shape);
+            flower_radial_shape += smoothstep(0., 0.025, -_p.y + .18 * abs(_p.x));
+
+            float grow_time = step(.25, u_stop_time) * pow(u_stop_time, .25);
+            float flower_shape = 1. - smoothstep(0., flower_sectoral_shape, _outline * flower_radial_shape / grow_time);
+
+            flower_shape *= (1. - step(1., grow_time));
+
+            return flower_shape;
+        }
+
+        float get_stem_shape(vec2 _p, vec2 _uv, float _w, float _angle) {
+
+            _w = max(.003, _w);
+           
+            float x_offset = _p.y * sin(_angle);
+            x_offset *= pow(3. * _uv.y, 2.);
+            _p.x -= x_offset;
+
+            // add horizontal noise to the stem
+            float noise_power = .4;
+            float cursor_horizontal_noise = noise_power * snoise(2.5 * _uv * u_stop_randomizer[0]);
+            cursor_horizontal_noise *= pow(dot(_p.y, _p.y), .5);
+            cursor_horizontal_noise *= pow(dot(_uv.y, _uv.y), .25);
+            _p.x += cursor_horizontal_noise;
+
+            // vertical line through the cursor point
+            float left = smoothstep(-_w, 0., _p.x);
+            float right = 1. - smoothstep(0., _w, _p.x);
+            float stem_shape = left * right;
+
+            // make it grow + don't go up to the cursor point
+            float grow_time = 1. - smoothstep(0., .18, u_stop_time);
+            float stem_top_mask = smoothstep(0., pow(grow_time, .45), .035 -_p.y);
+            stem_shape *= stem_top_mask;
+
+            // stop drawing once done
+            stem_shape *= (1. - step(.17, u_stop_time));
+
+            return stem_shape;
+        }
+
+        // Enhanced leaf shape
+        float get_leaf_shape(vec2 p, float angle, float size) {
+            float a = atan(p.y, p.x) + angle;
+            float r = length(p);
+            
+            // Serrated edges and vein structure
+            float serration = sin(a * 15.0) * 0.1; // Edge detail
+            float vein = abs(sin(a * 3.0)); // Main vein
+            
+            float leaf_curve = sin(a * 2.0 + serration) * 0.5 + 0.5;
+            
+            // Taper mechanism
+            float taper = smoothstep(size, 0.0, r);
+            taper *= smoothstep(0.0, size * 0.2, r); // Don't start exactly at stem center
+            
+            float leaf = leaf_curve * taper;
+            leaf *= step(0.0, sin(a)); // Half circle basic shape
+            
+            // Add texture/noise
+            leaf += snoise(p * 20.0) * 0.1 * leaf;
+            
+            return max(0.0, leaf) * 0.8;
+        }
+
+        void main() {
+
+            vec3 base = texture2D(u_texture, vUv).xyz;
+
+            vec2 uv = vUv;
+            uv.x *= u_ratio;
+            vec2 cursor = vUv - u_cursor.xy;
+            cursor.x *= u_ratio;
+            
+            // Enhanced stem colors with gradient
+            vec3 stem_color_light = vec3(.15 + u_stop_randomizer[0] * .4, .65, .25);
+            vec3 stem_color_dark = vec3(.1, .45, .15);
+            vec3 stem_color = mix(stem_color_light, stem_color_dark, u_theme);
+            
+            // Romantic flower palette - roses, blush pinks & soft lavenders 💕
+            float color_type = floor(u_stop_randomizer[1] * 4.0);
+            vec3 flower_color;
+            
+            if (color_type < 1.0) {
+                // Deep romantic rose red
+                flower_color = vec3(.9, .12, .3);
+            } else if (color_type < 2.0) {
+                // Blush pink
+                flower_color = vec3(1., .55, .65);
+            } else if (color_type < 3.0) {
+                // Hot valentine pink
+                flower_color = vec3(.98, .3, .55);
+            } else {
+                // Soft lavender rose
+                flower_color = vec3(.8, .45, .85);
+            }
+            
+            // Add slight variation
+            flower_color += vec3(u_stop_randomizer[0] * 0.1 - 0.05);
+
+            float angle = .5 * (u_stop_randomizer[0] - .5);
+
+            float stem_shape = get_stem_shape(cursor, uv, .004, angle);
+            stem_shape += get_stem_shape(cursor + vec2(0., .22 + .4 * u_stop_randomizer[0]), uv, .003, angle);
+            float stem_mask = 1. - get_stem_shape(cursor, uv, .005, angle);
+            stem_mask -= get_stem_shape(cursor + vec2(0., .22 + .4 * u_stop_randomizer[0]), uv, .004, angle);
+
+            // Add small leaves to stems
+            float leaf1 = get_leaf_shape(cursor + vec2(0.02, 0.08), angle + 0.5, 0.02);
+            float leaf2 = get_leaf_shape(cursor + vec2(-0.02, 0.12), angle - 0.5, 0.015);
+            stem_shape += leaf1 + leaf2;
+
+            float petals_back_number = 2. + floor(u_stop_randomizer[0] * 3.);
+            float angle_offset = -(2. * step(0., angle) - 1.) * .08 * u_stop_time;
+            float flower_back_shape = get_flower_shape(cursor, petals_back_number, angle + angle_offset, 1.4);
+            float flower_back_mask = 1. - get_flower_shape(cursor, petals_back_number, angle + angle_offset, 1.5);
+
+            float petals_front_number = 3. + floor(u_stop_randomizer[1] * 3.);
+            float flower_front_shape = get_flower_shape(cursor, petals_front_number, angle, 1.);
+            float flower_front_mask = 1. - get_flower_shape(cursor, petals_front_number, angle, .92);
+
+            vec3 color = base;
+            color *= stem_mask;
+            color *= flower_back_mask;
+            color *= flower_front_mask;
+
+            color += (stem_shape * stem_color);
+
+            // Add depth to flowers with gradient shading
+            vec3 flower_back_color = flower_color * 0.7;
+            color += (flower_back_shape * flower_back_color);
+            color += (flower_front_shape * flower_color);
+
+            // Enhanced flower center highlight
+            float center_dist = length(cursor) * 15.0;
+            float center_highlight = smoothstep(1.5, 0.0, center_dist) * flower_front_shape;
+            color += vec3(1.0, 0.95, 0.7) * center_highlight * 0.4 * step(0.3, u_stop_time);
+
+            // Subtle shadows for depth
+            color.rgb *= 1.0 - (0.3 * flower_back_shape * flower_front_shape);
+
+            color *= u_clean;
+
+            gl_FragColor = vec4(color, 1.);
+        }
+
+
+    </script>
+
+    <script type="x-shader/x-vertex" id="vertexShader">
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = vec4(position, 1.);
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="main.js"></script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a09ef4c8ef12df89',t:'MTc4MTE2MzUwNg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+
+</html>

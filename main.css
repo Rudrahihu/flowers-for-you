@@ -1,0 +1,383 @@
+:root {
+    --bg-color: #14050e;
+    --text-color: #ffe3ee;
+    --accent-color: #ff6b9d;
+    --accent-hover: #ff4f8b;
+    --ui-glass: rgba(255, 107, 157, 0.18);
+    /* Slightly more opaque for premium feel */
+    --ui-border: rgba(255, 182, 206, 0.45);
+    --shadow: 0 8px 32px 0 rgba(255, 107, 157, 0.15);
+    --font-serif: 'Playfair Display', serif;
+    --font-sans: 'Inter', sans-serif;
+}
+
+[data-theme="dark"] {
+    --bg-color: #1a1a2e;
+    --text-color: #e0e0e0;
+    --accent-color: #ff8fa3;
+    --accent-hover: #ff758f;
+    --ui-glass: rgba(20, 20, 35, 0.75);
+    --ui-border: rgba(255, 255, 255, 0.1);
+    --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+* {
+    box-sizing: border-box;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html,
+body {
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    background-color: var(--bg-color);
+    background-image:
+        radial-gradient(ellipse at 20% 110%, rgba(255, 80, 140, 0.18), transparent 55%),
+        radial-gradient(ellipse at 80% 100%, rgba(180, 80, 220, 0.14), transparent 55%),
+        radial-gradient(ellipse at 50% -10%, rgba(255, 120, 170, 0.08), transparent 60%);
+    font-family: var(--font-sans);
+    color: var(--text-color);
+}
+
+.container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 0;
+}
+
+/* Header */
+.header {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    pointer-events: none;
+    z-index: 10;
+    transition: opacity 1s ease;
+}
+
+.logo {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-color);
+    text-shadow: 0 0 18px rgba(255, 107, 157, 0.6), 0 2px 4px rgba(0, 0, 0, 0.3);
+    opacity: 0;
+    animation: fadeInDown 1s ease-out 0.5s forwards;
+}
+
+.giggle {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    font-weight: 300;
+    font-style: italic;
+    color: #ff9ec1;
+    display: inline-block;
+    animation: giggleWiggle 2.2s ease-in-out infinite;
+}
+
+@keyframes giggleWiggle {
+    0%, 100% { transform: rotate(-2deg) scale(1); }
+    25% { transform: rotate(2deg) scale(1.06); }
+    50% { transform: rotate(-1.5deg) scale(1); }
+    75% { transform: rotate(1.5deg) scale(1.04); }
+}
+
+/* Center Text */
+.name {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+    z-index: 5;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    transition: opacity 1s ease, transform 1s ease;
+}
+
+.text-line {
+    font-size: 1.6rem;
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeInUp 1s ease-out 0.2s forwards;
+}
+
+.text-highlight {
+    font-family: var(--font-serif);
+    font-size: 4rem;
+    font-weight: 600;
+    background: linear-gradient(45deg, #ff6b9d, #ffb3c9, #c98aff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    opacity: 0;
+    animation: fadeInUp 1s ease-out 0.4s forwards, heartbeatGlow 2.6s ease-in-out 1.5s infinite;
+    white-space: nowrap;
+    filter: drop-shadow(0 0 14px rgba(255, 107, 157, 0.45));
+}
+
+@keyframes heartbeatGlow {
+    0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 107, 157, 0.35)); }
+    50% { filter: drop-shadow(0 0 26px rgba(255, 107, 157, 0.75)); }
+}
+
+.hint {
+    margin-top: 1rem;
+    font-size: 1rem;
+    opacity: 0;
+    animation: fadeIn 1s ease-out 1s forwards;
+    background: var(--ui-glass);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+}
+
+/* UI Controls - Centered Bottom */
+.controls {
+    position: absolute;
+    bottom: 2.5rem;
+    /* Nice spacing from bottom */
+    left: 50%;
+    transform: translateX(-50%);
+    /* Perfectly centered */
+    display: flex;
+    flex-direction: row;
+    /* Horizontal alignment */
+    gap: 1.2rem;
+    z-index: 20;
+    opacity: 0;
+    animation: fadeInUp 1s ease-out 0.8s forwards;
+    width: auto;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.05);
+    /* Very subtle container bg */
+    border-radius: 60px;
+    backdrop-filter: blur(2px);
+}
+
+button {
+    background: var(--ui-glass);
+    border: 1px solid var(--ui-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0.8rem 1.8rem;
+    /* Premium pill shape padding */
+    border-radius: 50px;
+    /* Full pill shape */
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* Jelly bounce effect */
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    outline: none;
+    min-width: 140px;
+    justify-content: center;
+}
+
+button:hover {
+    transform: translateY(-4px) scale(1.02);
+    background: rgba(255, 107, 157, 0.85);
+    color: #fff;
+    box-shadow: 0 10px 25px rgba(255, 107, 157, 0.35);
+}
+
+[data-theme="dark"] button:hover {
+    background: rgba(50, 50, 70, 0.95);
+    color: white;
+}
+
+button:active {
+    transform: translateY(-1px) scale(0.98);
+}
+
+button.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+    box-shadow: 0 8px 20px rgba(255, 107, 157, 0.45);
+}
+
+/* 🎵 YouTube mini-player: hidden until music is turned on */
+.yt-hidden {
+    position: fixed;
+    bottom: 2.5rem;
+    right: 2rem;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    z-index: 30;
+    pointer-events: none;
+}
+
+.yt-hidden.yt-visible {
+    width: 280px;
+    height: 158px;
+    opacity: 1;
+    pointer-events: auto;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 107, 157, 0.6);
+    box-shadow: 0 10px 35px rgba(255, 107, 157, 0.35);
+    animation: fadeIn 0.5s ease forwards;
+}
+
+@media screen and (max-width: 768px) {
+    .yt-hidden.yt-visible {
+        width: 220px;
+        height: 124px;
+        bottom: 7.5rem;
+        right: 1rem;
+    }
+}
+
+/* 💕 Floating hearts */
+.floating-heart {
+    position: fixed;
+    z-index: 15;
+    pointer-events: none;
+    user-select: none;
+    transform: translate(-50%, -50%);
+    animation: floatHeart 3s ease-out forwards;
+    filter: drop-shadow(0 0 6px rgba(255, 107, 157, 0.6));
+}
+
+@keyframes floatHeart {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.4) rotate(-8deg);
+    }
+    15% {
+        opacity: 1;
+        transform: translate(-50%, -90%) scale(1.1) rotate(6deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -380%) scale(0.9) rotate(-10deg);
+    }
+}
+
+.btn-icon {
+    font-size: 1.1rem;
+}
+
+/* Footer */
+.footer {
+    position: absolute;
+    bottom: 0.8rem;
+    right: 2rem;
+    text-align: right;
+    font-size: 0.7rem;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(-50%, 30px, 0);
+        /* Keeping X centering */
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(-50%, 0, 0);
+    }
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translate3d(0, -30px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 0.8;
+    }
+}
+
+/* Interaction Fade Outs */
+.name.fade-out {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+    pointer-events: none;
+}
+
+.header.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Particles Background */
+.particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Responsive */
+@media screen and (max-width: 768px) {
+    .text-highlight {
+        font-size: 2.8rem;
+    }
+
+    .controls {
+        width: 90%;
+        bottom: 2rem;
+        gap: 0.8rem;
+        padding: 0.5rem;
+    }
+
+    button {
+        padding: 0.7rem 1rem;
+        min-width: unset;
+        font-size: 0.85rem;
+        flex: 1;
+        /* Stretch buttons on mobile */
+    }
+}
