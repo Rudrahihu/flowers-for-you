@@ -13,12 +13,20 @@ const headerEl = document.querySelector('.header');
    Plan B: fall back to a YouTube mini-player
 ------------------------------------------------------------------- */
 const YT_VIDEO_ID = '-BjZmE2gtdo'; // Taylor Swift – Lover (Official Music Video)
+const SONG_START_AT = 120; // ⏩ start at 2:00
 let isMusicPlaying = false;
 
 // Plan A: local mp3
 const bgAudio = new Audio('lover.mp3');
 bgAudio.loop = true;
 bgAudio.volume = 0.7;
+
+// when the song loops back, also skip the intro
+bgAudio.addEventListener('timeupdate', () => {
+	if (bgAudio.currentTime < SONG_START_AT - 0.5) {
+		bgAudio.currentTime = SONG_START_AT;
+	}
+});
 
 function setMusicBtn(playing) {
 	musicBtn.classList.toggle('active', playing);
@@ -30,7 +38,7 @@ function startYouTubeFallback() {
 	const holder = document.getElementById('ytPlayer');
 	holder.innerHTML = '<iframe width="100%" height="100%" ' +
 		'src="https://www.youtube.com/embed/' + YT_VIDEO_ID +
-		'?autoplay=1&loop=1&playlist=' + YT_VIDEO_ID + '&controls=1&rel=0" ' +
+		'?autoplay=1&start=' + SONG_START_AT + '&loop=1&playlist=' + YT_VIDEO_ID + '&controls=1&rel=0" ' +
 		'frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>';
 	holder.classList.add('yt-visible');
 }
@@ -51,7 +59,8 @@ musicBtn.addEventListener('click', () => {
 		return;
 	}
 
-	// Try the local mp3 first
+	// Try the local mp3 first (skip the intro)
+	bgAudio.currentTime = SONG_START_AT;
 	bgAudio.play().then(() => {
 		// mp3 found & playing
 		isMusicPlaying = true;
